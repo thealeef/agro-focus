@@ -7,13 +7,16 @@ import bcrypt from 'bcryptjs';
 const fastify = Fastify({ logger: true });
 const prisma = new PrismaClient();
 
-// Configurações de Segurança
+// --- CONFIGURAÇÕES DE SEGURANÇA E CORS ---
 fastify.register(cors, { 
-  origin: "*", 
+  origin: true, // Permite que a Vercel acesse o backend
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] 
 });
 
-fastify.register(jwt, { secret: 'agro-focus-secret-key-2026' });
+// Use a variável de ambiente do Render ou 3333 para local
+fastify.register(jwt, { 
+  secret: process.env.JWT_SECRET || 'agro-focus-secret-key-2026' 
+});
 
 // --- ROTAS DE AUTENTICAÇÃO ---
 
@@ -22,13 +25,11 @@ fastify.post('/register', async (request, reply) => {
   const hashedPassword = await bcrypt.hash(password, 8);
   
   try {
-    // 1. Cria o Usuário
     const user = await prisma.user.create({
       data: { 
         email, 
         name, 
         password: hashedPassword,
-        // 2. Cria automaticamente um Talhão vinculado a esse usuário
         talhoes: {
           create: {
             nome: "Talhão Principal",
@@ -39,8 +40,7 @@ fastify.post('/register', async (request, reply) => {
     });
     return { id: user.id, name: user.name };
   } catch (e) {
-    console.error(e);
-    return reply.status(400).send({ error: "E-mail já cadastrado ou erro no servidor" });
+    return reply.status(400).send({ error: "E-mail já cadastrado" });
   }
 });
 
@@ -59,7 +59,6 @@ fastify.post('/login', async (request, reply) => {
 // --- ROTAS DE NEGÓCIO ---
 
 fastify.get('/stats', async (request) => {
-  // Filtro por data opcional via Query Params (?inicio=2026-01-01&fim=2026-12-31)
   const { inicio, fim } = request.query as any;
 
   const despesas = await prisma.despesa.findMany({
@@ -86,7 +85,13 @@ fastify.get('/stats', async (request) => {
 fastify.post('/despesas', async (request) => {
   const { descricao, valor, categoria, talhaoId, data } = request.body as any;
   return await prisma.despesa.create({
-    data: { descricao, valor: Number(valor), categoria, talhaoId, data: data ? new Date(data) : new Date() }
+    data: { 
+      descricao, 
+      valor: Number(valor), 
+      categoria, 
+      talhaoId, 
+      data: data ? new Date(data) : new Date() 
+    }
   });
 });
 
@@ -100,4 +105,16 @@ fastify.get('/talhoes', async () => {
   return await prisma.talhao.findMany({ include: { despesas: true } });
 });
 
-fastify.listen({ port: 3333 });
+// --- INICIALIZAÇÃO DINÂMICA (ESSENCIAL PARA RENDER) ---
+const start = async () => {
+  try {
+    const port = Number(process.env.PORT) || 3333;
+    await fastify.listen({ host: '0.0.0.0', port });
+    console.log(`🚀 Backend online na porta ${port}`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+start();

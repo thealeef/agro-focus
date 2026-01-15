@@ -6,6 +6,8 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { Login } from './Login'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
+
 function App() {
   // --- ESTADOS DE AUTENTICAÇÃO ---
   const [user, setUser] = useState<any>(() => {
@@ -43,11 +45,12 @@ function App() {
   const fetchData = async () => {
     if (!token) return
     try {
-      const resStats = await axios.get(`http://localhost:3333/stats`, {
+      const resStats = await axios.get(`${API_URL}/stats`, {
         params: { inicio: dataInicio, fim: dataFim }
       })
-      const resTalhoes = await axios.get('http://localhost:3333/talhoes')
-      
+
+      const resTalhoes = await axios.get(`${API_URL}/talhoes`);
+
       setStats(resStats.data)
       if (resTalhoes.data.length > 0) {
         setHistorico(resTalhoes.data[0].despesas || [])
@@ -55,18 +58,18 @@ function App() {
     } catch (err) { console.error("Erro ao buscar dados", err) }
   }
 
-  useEffect(() => { 
-    if (token) fetchData() 
+  useEffect(() => {
+    if (token) fetchData()
   }, [token, dataInicio, dataFim])
 
   // --- AÇÕES ---
   const handleAddDespesa = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const talhoes = await axios.get('http://localhost:3333/talhoes')
-      await axios.post('http://localhost:3333/despesas', {
+      const talhoes = await axios.get(`${API_URL}/talhoes`);
+      await axios.post(`${API_URL}/despesas`, {
         descricao, valor, categoria, talhaoId: talhoes.data[0].id
-      })
+      });
       setDescricao(''); setValor(''); fetchData()
     } catch (err) { alert("Erro ao salvar") }
   }
@@ -78,9 +81,9 @@ function App() {
       startY: 25,
       head: [['Descrição', 'Categoria', 'Data', 'Valor']],
       body: historico.map(d => [
-        d.descricao, 
-        d.categoria, 
-        new Date(d.data).toLocaleDateString('pt-BR'), 
+        d.descricao,
+        d.categoria,
+        new Date(d.data).toLocaleDateString('pt-BR'),
         `R$ ${d.valor.toFixed(2)}`
       ]),
     })
@@ -117,7 +120,7 @@ function App() {
 
       {/* FILTROS */}
       <div className="bg-white p-4 rounded-2xl mb-8 flex flex-wrap gap-4 items-center border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2 text-slate-500 font-medium"><Calendar size={18}/> Período:</div>
+        <div className="flex items-center gap-2 text-slate-500 font-medium"><Calendar size={18} /> Período:</div>
         <input type="date" className="border border-slate-200 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" onChange={e => setDataInicio(e.target.value)} />
         <span className="text-slate-400">até</span>
         <input type="date" className="border border-slate-200 p-2 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500" onChange={e => setDataFim(e.target.value)} />
@@ -127,7 +130,7 @@ function App() {
         {/* COLUNA ESQUERDA */}
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <h3 className="font-bold mb-4 flex items-center gap-2"><PlusCircle size={18} className="text-green-600"/> Novo Lançamento</h3>
+            <h3 className="font-bold mb-4 flex items-center gap-2"><PlusCircle size={18} className="text-green-600" /> Novo Lançamento</h3>
             <form onSubmit={handleAddDespesa} className="space-y-4">
               <input value={descricao} onChange={e => setDescricao(e.target.value)} placeholder="Descrição" className="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500" />
               <input value={valor} onChange={e => setValor(e.target.value)} type="number" placeholder="Valor R$" className="w-full border border-slate-200 p-3 rounded-xl outline-none focus:ring-2 focus:ring-green-500" />
@@ -141,21 +144,21 @@ function App() {
           <div className="bg-gradient-to-br from-green-600 to-green-700 p-6 rounded-2xl text-white shadow-xl">
             <p className="text-sm opacity-80 font-medium">Investimento Total</p>
             <h2 className="text-4xl font-black mt-1">R$ {stats?.totalGeral?.toLocaleString('pt-BR')}</h2>
-            <div className="mt-4 flex items-center gap-2 text-xs bg-white/20 w-fit px-3 py-1 rounded-full"><Tractor size={14}/> Gleba Norte - Ativa</div>
+            <div className="mt-4 flex items-center gap-2 text-xs bg-white/20 w-fit px-3 py-1 rounded-full"><Tractor size={14} /> Gleba Norte - Ativa</div>
           </div>
         </div>
 
         {/* COLUNA DIREITA */}
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
-            <div className="flex items-center gap-2 mb-8"><BarChart3 size={20} className="text-slate-400"/><h2 className="text-xl font-bold">Distribuição de Custos</h2></div>
+            <div className="flex items-center gap-2 mb-8"><BarChart3 size={20} className="text-slate-400" /><h2 className="text-xl font-bold">Distribuição de Custos</h2></div>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats?.categorias}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} />
                   <YAxis axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none'}} />
+                  <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none' }} />
                   <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
                     {stats?.categorias?.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Bar>
@@ -165,23 +168,23 @@ function App() {
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-             <h3 className="font-bold mb-4 text-slate-800">Histórico de Lançamentos</h3>
-             <div className="space-y-3">
-               {historico.length > 0 ? historico.map((item) => (
-                 <div key={item.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-green-100 transition-all">
-                   <div>
-                     <p className="font-bold text-slate-700">{item.descricao}</p>
-                     <p className="text-[10px] text-slate-400 uppercase font-black">{item.categoria}</p>
-                   </div>
-                   <div className="flex items-center gap-6">
-                     <span className="font-bold text-green-700">R$ {item.valor.toLocaleString('pt-BR')}</span>
-                     <button onClick={async () => { if(confirm("Excluir?")){ await axios.delete(`http://localhost:3333/despesas/${item.id}`); fetchData(); } }} className="text-red-300 hover:text-red-500 transition-colors">
-                       <Trash2 size={18}/>
-                     </button>
-                   </div>
-                 </div>
-               )) : <p className="text-center text-slate-400 py-4">Nenhum dado encontrado.</p>}
-             </div>
+            <h3 className="font-bold mb-4 text-slate-800">Histórico de Lançamentos</h3>
+            <div className="space-y-3">
+              {historico.length > 0 ? historico.map((item) => (
+                <div key={item.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-green-100 transition-all">
+                  <div>
+                    <p className="font-bold text-slate-700">{item.descricao}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-black">{item.categoria}</p>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <span className="font-bold text-green-700">R$ {item.valor.toLocaleString('pt-BR')}</span>
+                    <button onClick={async () => { if (confirm("Excluir?")) { await axios.delete(`${API_URL}/despesas/${item.id}`); fetchData(); } }} className="text-red-300 hover:text-red-500 transition-colors">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              )) : <p className="text-center text-slate-400 py-4">Nenhum dado encontrado.</p>}
+            </div>
           </div>
         </div>
       </div>
