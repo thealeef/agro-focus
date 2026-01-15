@@ -6,6 +6,9 @@ interface LoginProps {
   onLoginSuccess: (token: string, user: any) => void
 }
 
+// DEFINIÇÃO DA URL DINÂMICA (Igual ao App.tsx)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3333';
+
 export function Login({ onLoginSuccess }: LoginProps) {
   const [isRegister, setIsRegister] = useState(false)
   const [email, setEmail] = useState('')
@@ -16,7 +19,9 @@ export function Login({ onLoginSuccess }: LoginProps) {
     e.preventDefault()
     try {
       const endpoint = isRegister ? '/register' : '/login'
-      const res = await axios.post(`http://localhost:3333${endpoint}`, {
+      
+      // ALTERADO: Usando a variável API_URL com crases
+      const res = await axios.post(`${API_URL}${endpoint}`, {
         email, password, name
       })
 
@@ -27,7 +32,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
         setIsRegister(false)
       }
     } catch (err: any) {
-      alert(err.response?.data?.error || "Erro na operação")
+      alert(err.response?.data?.error || "Erro na operação. Verifique se o servidor está ligado.")
     }
   }
 
